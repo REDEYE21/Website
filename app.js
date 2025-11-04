@@ -17,6 +17,42 @@ app.use(session({
   saveUninitialized: false
 }));
 
+
+
+app.get('/counter', (req, res) => {
+  if (!req.session.authenticated) return res.status(401).send('Not authorized');
+  res.json({ counter: process.env.COUNTER });
+});
+
+// Update counter (+1 or -1)
+app.post('/counter', (req, res) => {
+  if (!req.session.authenticated) return res.status(401).send('Not authorized');
+
+  const { action } = req.body;
+  let counter = parseInt(process.env.COUNTER || 0);
+
+  if (action === 'increment') counter++;
+  else if (action === 'decrement') counter--;
+
+  process.env.COUNTER = counter.toString();
+
+  // Save to .env
+  const envPath = path.join(__dirname, '.env');
+  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+  const newLines = lines.map(line => line.startsWith('COUNTER=') ? `COUNTER=${counter}` : line);
+  fs.writeFileSync(envPath, newLines.join('\n'));
+
+  res.json({ counter });
+});
+
+
+
+
+
+
+
+
+
 // Protect dashboard
 app.use('/dashboard.html', (req, res, next) => {
   if (req.session && req.session.authenticated) return next();
