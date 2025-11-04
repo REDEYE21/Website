@@ -37,3 +37,48 @@ color: aqua
     font-size: 400%; 
 
 }
+
+
+#CounterHeader{
+color: black;
+text-align: center;
+font-size: 60px;
+
+
+
+}
+
+#counterValue{
+text-align: center;
+font-size: xx-large;
+
+
+}
+
+#decBtn{  display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 23px;   /* optional: make it bigger */
+    font-size: 16px; 
+
+
+}
+
+#incBtn{
+  display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 20px;   /* optional: make it bigger */
+    font-size: 16px; 
+
+
+}
+#counterRemaining{
+
+  display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 20px;   /* optional: make it bigger */
+    font-size: 56px; 
+text-align-last: center;
+
+
+}
+
