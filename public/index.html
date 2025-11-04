@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="styles.css">
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<!-- Load Google reCAPTCHA API -->
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+<h2 id="WelcomeText">هلا مرتضى، دخل الباسورد علشان نتأكد أنّك مرتضى :)</h2>
+<form method="POST" action="/login">
+  <input id="PasswordBox" type="password" name="password" placeholder="Password" required><br><br>
+  
+  <!-- Google reCAPTCHA widget -->
+  <div id="CAP" class="g-recaptcha" data-sitekey="6LeWMQIsAAAAAMMcNyeBBC7MssyIyFQHq9vtRNHY"></div>
+  <br>
+  
+  <button id="SumbitButton" type="submit">Submit</button>
+</form>
+</body>
+</html>

@@ -1,0 +1,39 @@
+.title {
+    text-align: center;
+    color: green;
+}
+
+#WelcomeText {
+    color: darkblue;
+text-align: center;
+}
+
+#PasswordBox {
+    display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 10px;   /* optional: make it bigger */
+    font-size: 16px; /* optional: bigger font */
+}
+
+#SumbitButton {
+    display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 10px;   /* optional: make it bigger */
+    font-size: 16px; /* optional: bigger font */
+}
+#CAP {
+      display: flex;
+    justify-content: center      /* horizontal centering */
+}
+#Welcome2nd{
+text-align: center;
+color: aqua
+
+}
+.AllButton{
+ display: block;
+    margin: 0 auto;  /* top-bottom: 0, left-right: auto */
+    padding: 18px;   /* optional: make it bigger */
+    font-size: 400%; 
+
+}
