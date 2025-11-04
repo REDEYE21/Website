@@ -20,7 +20,7 @@ const REPO = process.env.GITHUB_REPO;
 const FILE_PATH = process.env.COUNTER_PATH;
 
 // ------------------------
-// Helper: Get counter from GitHub
+// 
 // ------------------------
 async function getCounter() {
   const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
@@ -94,11 +94,12 @@ app.post('/counter', async (req, res) => {
 
   await updateCounterOnGitHub(counter, data.sha);
 
+
   res.json({ counter });
 });
 
 // ------------------------
-// Serve HTML
+// 
 // ------------------------
 app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 
