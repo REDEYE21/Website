@@ -1,71 +1,71 @@
 require('dotenv').config();
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --------------------
-// Middleware
-// --------------------
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json()); // Needed for JSON requests (like POST /counter)
-
+app.use(express.json());
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'change-this-secret',
+  secret: 'change-this-secret',
   resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // set true only if using HTTPS + proxy trust
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
-  }
+  saveUninitialized: false
 }));
+app.use(express.static('public'));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const USER = process.env.GITHUB_USER;
+const REPO = process.env.GITHUB_REPO;
+const FILE_PATH = process.env.COUNTER_PATH;
 
-// --------------------
-// Counter logic
-// --------------------
-let counter = parseInt(process.env.COUNTER || 0);
+// ------------------------
+// Helper: Get counter from GitHub
+// ------------------------
+async function getCounter() {
+  const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `token ${GITHUB_TOKEN}` }
+  });
+  const data = await res.json();
+  const content = Buffer.from(data.content, 'base64').toString();
+  const json = JSON.parse(content);
+  return { counter: json.counter, sha: data.sha };
+}
 
-app.get('/counter', (req, res) => {
-  if (!req.session.authenticated) return res.status(401).send('Not authorized');
-  res.json({ counter });
-});
+// Helper: Update counter on GitHub
+async function updateCounterOnGitHub(newValue, sha) {
+  const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
+  const body = {
+    message: `Update counter to ${newValue}`,
+    content: Buffer.from(JSON.stringify({ counter: newValue }, null, 2)).toString('base64'),
+    sha
+  };
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
 
-app.post('/counter', (req, res) => {
-  if (!req.session.authenticated) return res.status(401).send('Not authorized');
-
-  const { action } = req.body;
-
-  if (action === 'increment') counter++;
-  else if (action === 'decrement') counter--;
-
-  process.env.COUNTER = counter.toString();
-
-  // Safely update the .env file
-  const envPath = path.join(__dirname, '.env');
-  let envContent = fs.readFileSync(envPath, 'utf8');
-  if (envContent.includes('COUNTER=')) {
-    envContent = envContent.replace(/COUNTER=.*/, `COUNTER=${counter}`);
-  } else {
-    envContent += `\nCOUNTER=${counter}`;
-  }
-  fs.writeFileSync(envPath, envContent);
-
-  res.json({ counter });
-});
-
-// --------------------
-// Auth + dashboard
-// --------------------
-app.get('/', (req, res) => {
-  if (req.session && req.session.authenticated)
+// ------------------------
+// Auth routes
+// ------------------------
+app.post('/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.PASSWORD) {
+    req.session.authenticated = true;
     return res.redirect('/dashboard.html');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  res.status(401).send('Incorrect password');
+});
+
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/'));
 });
 
 app.use('/dashboard.html', (req, res, next) => {
@@ -73,33 +73,33 @@ app.use('/dashboard.html', (req, res, next) => {
   res.redirect('/');
 });
 
-app.post('/login', async (req, res) => {
-  const { password, 'g-recaptcha-response': recaptchaResponse } = req.body;
-
-  if (!recaptchaResponse)
-    return res.status(400).send('Please complete the reCAPTCHA.');
-
-  // reCAPTCHA verification
-  const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${recaptchaResponse}`;
-  const response = await fetch(verifyURL, { method: 'POST' });
-  const data = await response.json();
-
-  if (!data.success)
-    return res.status(400).send('Failed reCAPTCHA verification.');
-
-  if (password === process.env.PASSWORD) {
-    req.session.authenticated = true;
-    return res.redirect('/dashboard.html');
-  }
-
-  res.status(401).send('Incorrect password.');
+// ------------------------
+// Counter routes
+// ------------------------
+app.get('/counter', async (req, res) => {
+  if (!req.session.authenticated) return res.status(401).send('Not authorized');
+  const data = await getCounter();
+  res.json({ counter: data.counter });
 });
 
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/'));
+app.post('/counter', async (req, res) => {
+  if (!req.session.authenticated) return res.status(401).send('Not authorized');
+
+  const { action } = req.body;
+  const data = await getCounter();
+  let counter = data.counter;
+
+  if (action === 'increment') counter++;
+  else if (action === 'decrement' && counter > 0) counter--;
+
+  await updateCounterOnGitHub(counter, data.sha);
+
+  res.json({ counter });
 });
 
-// --------------------
-// Start server
-// --------------------
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// ------------------------
+// Serve HTML
+// ------------------------
+app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
