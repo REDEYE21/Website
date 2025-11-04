@@ -9,30 +9,48 @@
 <script>
 const MAX_COUNT = 10000;
 
+// Fetch counter from server
 async function fetchCounter() {
-  const res = await fetch('/counter');
+  const res = await fetch('/counter', {
+    credentials: 'same-origin' // <-- send session cookie
+  });
+  if (!res.ok) {
+    console.error('Failed to fetch counter', res.status);
+    return;
+  }
   const data = await res.json();
   updateCounterDisplay(data.counter);
 }
 
+// Update counter (+1 or -1)
 async function updateCounter(action) {
   const res = await fetch('/counter', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ action })
+    body: JSON.stringify({ action }),
+    credentials: 'same-origin' // <-- send session cookie
   });
+
+  if (!res.ok) {
+    console.error('Failed to update counter', res.status);
+    return;
+  }
+
   const data = await res.json();
   updateCounterDisplay(data.counter);
 }
 
+// Update display
 function updateCounterDisplay(counter) {
   document.getElementById('counterValue').innerText = `${counter} / ${MAX_COUNT}`;
   const remaining = MAX_COUNT - counter;
   document.getElementById('counterRemaining').innerText = `المتبقي: ${remaining > 0 ? remaining : 0}`;
 }
 
+// Button listeners
 document.getElementById('incBtn').addEventListener('click', () => updateCounter('increment'));
 document.getElementById('decBtn').addEventListener('click', () => updateCounter('decrement'));
 
-fetchCounter(); // Load initial value
+// Load initial value
+fetchCounter();
 </script>
