@@ -77,9 +77,11 @@ app.use('/dashboard.html', (req, res, next) => {
 // Counter routes.
 // ------------------------
 app.get('/counter', async (req, res) => {
+
   if (!req.session.authenticated) return res.status(401).send('Not authorized');
   const data = await getCounter();
   res.json({ counter: data.counter });
+
 });
 
 app.post('/counter', async (req, res) => {
