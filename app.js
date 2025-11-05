@@ -23,27 +23,50 @@ const FILE_PATH = process.env.COUNTER_PATH;
 // Helper: Get counter from GitHub
 // ------------------------
 async function getCounter() {
-  const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
+  const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}?ref=main`;
   const res = await fetch(url, {
     headers: { Authorization: `token ${GITHUB_TOKEN}` }
   });
   const data = await res.json();
+
+  if (!res.ok) {
+    console.error('GitHub API error:', data);
+    throw new Error(data.message || 'GitHub API error');
+  }
+
   const content = Buffer.from(data.content, 'base64').toString();
   const json = JSON.parse(content);
   return { counter: json.counter, sha: data.sha };
 }
 
 // ------------------------
-// Helper: Update counter on GitHub
+// Helper: Update counter on GitHub (always fetches fresh sha)
 // ------------------------
-async function updateCounterOnGitHub(newValue, sha) {
-  const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
+async function updateCounterOnGitHub(newValue) {
+  // Get the latest SHA before updating
+  const getUrl = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}?ref=main`;
+  const getRes = await fetch(getUrl, {
+    headers: { Authorization: `token ${GITHUB_TOKEN}` }
+  });
+  const getData = await getRes.json();
+
+  if (!getRes.ok) {
+    console.error('GitHub GET error:', getData);
+    throw new Error(getData.message || 'Failed to fetch latest SHA');
+  }
+
+  const sha = getData.sha;
+
+  // Update the file with the new value
+  const putUrl = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
   const body = {
     message: `Update counter to ${newValue}`,
     content: Buffer.from(JSON.stringify({ counter: newValue }, null, 2)).toString('base64'),
-    sha
+    sha,
+    branch: 'main'
   };
-  const res = await fetch(url, {
+
+  const putRes = await fetch(putUrl, {
     method: 'PUT',
     headers: {
       Authorization: `token ${GITHUB_TOKEN}`,
@@ -51,7 +74,14 @@ async function updateCounterOnGitHub(newValue, sha) {
     },
     body: JSON.stringify(body)
   });
-  return res.json();
+
+  const putData = await putRes.json();
+  if (!putRes.ok) {
+    console.error('GitHub PUT error:', putData);
+    throw new Error(putData.message || 'GitHub update failed');
+  }
+
+  return putData;
 }
 
 // ------------------------
@@ -97,7 +127,7 @@ app.post('/counter', async (req, res) => {
     if (action === 'increment') counter++;
     else if (action === 'decrement' && counter > 0) counter--;
 
-    await updateCounterOnGitHub(counter, data.sha);
+    await updateCounterOnGitHub(counter);
     res.json({ counter });
   } catch (err) {
     console.error(err);
