@@ -55,7 +55,28 @@ async function updateCounterOnGitHub(newValue, sha) {
 }
 
 // ------------------------
-// Counter routes (no auth)
+// Auth routes
+// ------------------------
+app.post('/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.PASSWORD) {
+    req.session.authenticated = true;
+    return res.redirect('/dashboard.html');
+  }
+  res.status(401).send('Incorrect password');
+});
+
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/'));
+});
+
+app.use('/dashboard.html', (req, res, next) => {
+  if (req.session && req.session.authenticated) return next();
+  res.redirect('/');
+});
+
+// ------------------------
+// Counter routes (no login required)
 // ------------------------
 app.get('/counter', async (req, res) => {
   try {
