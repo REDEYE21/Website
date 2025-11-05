@@ -20,7 +20,7 @@ const REPO = process.env.GITHUB_REPO;
 const FILE_PATH = process.env.COUNTER_PATH;
 
 // ------------------------
-// 
+// Helper: Get counter from GitHub
 // ------------------------
 async function getCounter() {
   const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
@@ -33,7 +33,9 @@ async function getCounter() {
   return { counter: json.counter, sha: data.sha };
 }
 
+// ------------------------
 // Helper: Update counter on GitHub
+// ------------------------
 async function updateCounterOnGitHub(newValue, sha) {
   const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE_PATH}`;
   const body = {
@@ -53,55 +55,37 @@ async function updateCounterOnGitHub(newValue, sha) {
 }
 
 // ------------------------
-// Auth routes
-// ------------------------
-app.post('/login', (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.PASSWORD) {
-    req.session.authenticated = true;
-    return res.redirect('/dashboard.html');
-  }
-  res.status(401).send('Incorrect password');
-});
-
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/'));
-});
-
-app.use('/dashboard.html', (req, res, next) => {
-  if (req.session && req.session.authenticated) return next();
-  res.redirect('/');
-});
-
-// ------------------------
-// Counter routes.
+// Counter routes (no auth)
 // ------------------------
 app.get('/counter', async (req, res) => {
-
-  if (!req.session.authenticated) return res.status(401).send('Not authorized');
-  const data = await getCounter();
-  res.json({ counter: data.counter });
-
+  try {
+    const data = await getCounter();
+    res.json({ counter: data.counter });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching counter');
+  }
 });
 
 app.post('/counter', async (req, res) => {
-  if (!req.session.authenticated) return res.status(401).send('Not authorized');
+  try {
+    const { action } = req.body;
+    const data = await getCounter();
+    let counter = data.counter;
 
-  const { action } = req.body;
-  const data = await getCounter();
-  let counter = data.counter;
+    if (action === 'increment') counter++;
+    else if (action === 'decrement' && counter > 0) counter--;
 
-  if (action === 'increment') counter++;
-  else if (action === 'decrement' && counter > 0) counter--;
-
-  await updateCounterOnGitHub(counter, data.sha);
-
-
-  res.json({ counter });
+    await updateCounterOnGitHub(counter, data.sha);
+    res.json({ counter });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error updating counter');
+  }
 });
 
 // ------------------------
-// 
+// Root route
 // ------------------------
 app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 
