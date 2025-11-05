@@ -74,7 +74,7 @@ app.use('/dashboard.html', (req, res, next) => {
 });
 
 // ------------------------
-// Counter routes
+// Counter routes.
 // ------------------------
 app.get('/counter', async (req, res) => {
   if (!req.session.authenticated) return res.status(401).send('Not authorized');
